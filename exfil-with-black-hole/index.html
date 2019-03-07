@@ -1,0 +1,36 @@
+<html><head><title>Uploading files with black-hole</title> <style fprolloverstyle>A:hover {color: #D1F2C4; text-decoration: none}</style></head> <body text="#E0E0E0" bgcolor="#131313" link="#BFBFBF" vlink="#BFBFBF" alink="#BFBFBF" style="font-size: 11pt"><pre><hr>|| Uploading files with black-hole, author: xor-function || 01/25/2015 || <a style="text-decoration: none" href="../"><span style="text-decoration: none">Back to main</span></a><hr></pre><pre>
+
+Black hole is a Perl cgi program that lets you upload files. This may seem trivial 
+as there are many php scripts that do this but what makes this different is the reason 
+it's named black hole.
+
+The cgi is made to be used as a tor hidden service with no html form front end, although 
+you could build one this is not necessary as it's made to function with curl.
+
+Also a client that will upload via the cgi will not need to install the tor client 
+software. The trick behind it is the client event-horizon connects to the cgi for file 
+upload through tor2web like web proxies.
+
+The reasoning behind this, is that tor traffic may be detected/blocked by IDS/IDPS egress 
+filters on the gateway of a corporate LAN. For example VPS Hosting providers.
+
+To get around this the client establishes a regular TLS/SSL session with the tor 
+proxy/gateway which then forwards any HTTP requests to the black-hole hidden service.
+
+An example for practical application is to exfil data from on a C&C server to a more 
+personal system.
+
+The code is available on github
+
+<a style="text-decoration: none" href="https://github.com/xor-function/Black-Hole">https://github.com/xor-function/Black-Hole</a>
+
+to copy with git
+git clone https://github.com/xor-function/Black-Hole.git
+
+The cgi requires the CGI.pm Perl module, yes I chose to use this "old" module as it has 
+been thoroughly used therefore many of the caveats/pitfalls are already well known. Plus 
+the requirements are for the most part are very lightweight.
+
+A more thorough explanation is available in the repo's README.
+
+</pre></body></html>

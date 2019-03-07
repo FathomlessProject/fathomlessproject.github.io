@@ -1,0 +1,32 @@
+<html><head><title>The boot2own toolkit</title> <style fprolloverstyle>A:hover {color: #D1F2C4; text-decoration: none}</style></head> <body text="#E0E0E0" bgcolor="#131313" link="#BFBFBF" vlink="#BFBFBF" alink="#BFBFBF" style="font-size: 11pt"><pre><hr>|| The boot2own toolkit, Author: xor-function || 10/20/2015 <a style="text-decoration: none" href="../"><span style="text-decoration: none">Back to main</span></a>  <hr></pre><pre>
+
+Disclaimer: Mind your local laws, use discretion and common sense.
+
+Most have heard/know that physical access is total access when it come to 
+computer security but is seems the only way this is visualized by most is 
+resetting a password or dumping forensically the contents of a hard drive 
+for later inspection.
+
+So I created the boot2own tool kit as it demonstrates the implications of 
+having physical access just to one domain machine.
+
+Menu
+<a><img class="size-large alignnone" src="../pics/b2o-menu.png" width="670" height="446" /></a>
+
+
+To explain more about what this toolkit does I will post a snippet from 
+the README that's hosted on the following git repo.
+
+<a style="text-decoration: none" href="https://github.com/xor-function/fathomless/tree/master/boot2own"><span style="text-decoration: none">https://github.com/xor-function/fathomless/tree/master/boot2own</span></a>
+
+Boot2own is a toolkit that generates a live OS from a crunchbang iso. When a 
+workstation is booted to this live environment its hard drive is mounted and 
+the NTLM hash of the local admin (RID 500) is extracted. The admin hash is 
+then leveraged in attacks against a Windows domain network using a patched 
+winexe binary.
+
+DEMO
+
+<iframe src="http://www.youtube.com/embed/vUvku_CwKT0" width="680" height="470" frameborder="0" allowfullscreen="allowfullscreen"></iframe>
+
+</pre></body></html>

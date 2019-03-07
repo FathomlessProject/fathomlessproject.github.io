@@ -1,0 +1,41 @@
+<html><head><title>RTL-SDR and Wireless Microphones</title> <style fprolloverstyle>A:hover {color: #D1F2C4; text-decoration: none}</style></head> <body text="#E0E0E0" bgcolor="#131313" link="#BFBFBF" vlink="#BFBFBF" alink="#BFBFBF" style="font-size: 11pt"><pre><hr>|| RTL-SDR and Wireless Microphones, Author: xor-function || 10/08/2015 || <a style="text-decoration: none" href="../"><span style="text-decoration: none">Back to main</span></a>  <hr></pre><pre>
+
+<iframe src="http://www.youtube.com/embed/51JC6pbcpaE" width="680" height="470" frameborder="0" allowfullscreen="allowfullscreen"></iframe>
+
+Disclaimer: Mind your local laws, use discretion and common sense.
+
+This is something that I wanted to tinker with to see what could be done and the results have 
+given me a few ideas on re-purposing the wireless microphone circuit board. Anyways what is needed 
+to do this yourself is an is a usb DVB-T dongle and some open source software. This software 
+turns the DVB-T USB dongle into a software defined radio which has the added benefit of 
+capabilities to that of a spectrum analyzer which can be very useful for finding a specific 
+signal transmission.
+ 
+The OS I'm using in the video is Ubuntu if you want to do this in windows your going to 
+have to look into <a style="text-decoration: none" href="http://airspy.com/download/">[sdrsharp]</a>.
+ 
+The important feature of the DVB-T usb dongle is that it's rtl2832U based.
+I bought mine for 19 bucks off of amazon at the time.
+Heres a <a style="text-decoration: none" href="http://www.reddit.com/r/RTLSDR/comments/s6ddo/rtlsdr_compatibility_list_v2_work_in_progress/">[compatibility list]</a>
+
+Although not necessary, for better range and signal quality I got UHF/VHF antenna with 
+some adapters from pal to coax and from coax to bnc.
+
+<a><img class="size-large alignnone" src="../pics/rtl-sdr-1.jpg" width="670" height="446" /></a>
+
+Purchased the antenna and adapters from radio shack
+
+To install the software follow the guides for <a style="text-decoration: none" href="https://groups.google.com/forum/#!topic/gqrx/qtfG1qbIn0s">[GQRX]</a> or <a style="text-decoration: none" href="http://rtlsdr.org/softwarewindows">[SdrSharp]</a>  
+that are hosted on there respective project websites were details are covered pretty well.
+ 
+After that is simple as doing the FM radio test to see if it working. But this time instead 
+of just sticking to the regular radio station frequencies check the 110Mhz to 250Mhz range. 
+Depending on the manufacture they may transmit on different ranges so you may have to do 
+some signal hunting. A good start would be to check the manufactures documentation 
+(manual, guides, specs) and see if the operating frequency range is mentioned.
+ 
+This is just scratching the surface with what software defined radio can do, but it also 
+makes one wonder how many different devices function like this wireless microphone 
+and just broadcast openly.
+
+</pre></body></html>

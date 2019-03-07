@@ -1,0 +1,32 @@
+<html><head><title>Getting the CH9200 USB/Ethernet adapter working</title> <style fprolloverstyle>A:hover {color: #D1F2C4; text-decoration: none}</style></head> <body text="#E0E0E0" bgcolor="#131313" link="#BFBFBF" vlink="#BFBFBF" alink="#BFBFBF" style="font-size: 11pt"><pre><hr>|| Getting the CH9200 USB/Ethernet adapter working, author: xor-function || 08/16/2015 || <a style="text-decoration: none" href="../"><span style="text-decoration: none">Back to main</span></a>  <hr></pre><pre>
+
+I got a cheap usb to ethernet adapter on ebay for around 5 bucks as I needed another interface while 
+working on seeing how far I could take js-poisoner. Usually as soon as I connect a usb interface it 
+is immediately recognized and assigned an interface name (eth0,usb0,wlan0, etc..) even if it's down. 
+
+This time nothing, dmesg detected a new USB device and lsusb identified it as..
+
+ID 1a86:e092 QinHeng Electronics
+
+So I figured out there was no drivers installed for it on Ubuntu 14.04 LTS.
+
+
+I'm putting this up here because there doesn't seem to be any detailed information other than a 
+bug report #751106 on the lists.debian site concerning this chipset which only contains the source code. 
+I ignored the instructions included since they are for building a "2.6.25" kernel that supports this driver.
+
+I had to track down a Makefile that after reading used uname to identify the current kernel version of your 
+system which should work for multiple kernel versions.
+
+Before you build make sure that if you copy the Make file using copy+paste insure that the tab's indenting 
+commands are preserved, you can check this by loading the saved file with vi. If you see any lines highlighted 
+in red you need to fix them.
+
+Or you could get the source code I fetched from the above bug report along with the Makefile from my github repo.
+
+<a style="text-decoration: none" href="https://github.com/xor-function/usb-ethernet-adapter">https://github.com/xor-function/usb-ethernet-adapter</a>
+
+To install the instructions are on the readme.
+
+
+</pre></body></html>

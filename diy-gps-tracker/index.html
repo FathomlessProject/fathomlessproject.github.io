@@ -1,0 +1,83 @@
+<html><head><title>DIY GPS Tracker</title> <style fprolloverstyle>A:hover {color: #D1F2C4; text-decoration: none}</style></head> <body text="#E0E0E0" bgcolor="#131313" link="#BFBFBF" vlink="#BFBFBF" alink="#BFBFBF" style="font-size: 11pt"><pre><hr>|| DIY GPS Tracker, author: xor-function || 04/23/2014 || <a style="text-decoration: none" href="../"><span style="text-decoration: none">Back to main</span></a>  <hr></pre><pre>
+
+Disclaimer: Mind your local laws, use discretion and common sense.
+
+
+In the past I have wanted to use a gps device for different purposes like tracking a car when stolen, but in the end 
+I've been off-put by the fact that most gps trackers require a third party service, which require monthly fees 
+similar to if not more expensive than a personal cell phone.
+
+I though of building one that transmitted it's position over rf with rtty or fsk encrypted data but as people familiar 
+with the FCC this would require extensive licensing. I also looked into arps and it works but not the manner in which 
+I wanted, still need a license (amateur radio) and the data would have to be in the clear (no encryption).
+
+Therefore I decided to use WiFi since it's designed for computer networks (TCP/IP) giving me the options I wanted. 
+Although not without certain costs, limited transmission range and the dependence of existing public WiFi access points.
+
+For this to work the device would first have to log gps data and also roam for open wireless access points much like 
+your smart phone does. Once the pi's connected it uploads the data to a specified server. This is done with rsync tunneled 
+through ssh using public key authentication.
+
+So then server side you will have two forms of data NMEA gps sentences and surrounding access point statistics, 
+to help with accuracy. To use the access point data an example can be seen <a style="text-decoration: none" href="http://www.nightowlconsulting.com/geolocation-methods/"><span style="text-decoration: none">here</span></a> from a previous post.
+
+Also another thing to consider are unknown egress filtering rules. Since the device would be using different access point 
+networks this would eventually begin interfere with ssh and rsync. For example only port 80 outbound or only HTTP traffic 
+is allowed out through a squid proxy on port 3128.
+
+In order to deal with this possibility I decided to use a ping tunnel since ICMP does not use any single port. The package 
+I selected for this was ptunnel since it's available on most if not all Linux distributions by means of there 
+respective package managers.
+
+So all that needed to be automated is a network connection test using a single ping to an external domain which will 
+answer two things. The device is connected to the Internet. ICMP is available, therefore a ping tunnel can be established.
+
+If you have read the content of this site before you would know I have a raspberry pi laying around so I definitely used 
+it to create the bash script that would automate this process.
+
+
+The code is available on github
+
+<a style="text-decoration: none" href="https://github.com/xor-function/rpi-tracker/"><span style="text-decoration: none">github.com/xor-function/rpi-tracker/</span></a>
+
+can grab a copy with git
+
+git clone http://github.com/xor-function/rpi-tracker.git
+
+The README has more details on use.
+
+
+PARTS:
+raspberry pi model B
+TTL serial gps (SainSmart Ublox NEO-6M, outputs NMEA gps data) used 3.3v power levels.
+USB wireless adapter (any working one should do)
+
+The cool thing about this script is that this can be reworked easily to run on other platforms just by cutting 
+out the parts of the script that enable the serial device, install packages on the pi to accommodate some 
+other platform. I believe the MR3020 to be a good candidate besides I've been wanting to mess 
+with it for other reasons.
+
+ 
+
+To sum up the set up process for the rpi:
+
+Get the parts, then assemble them.
+connect the ttl gps to the UART GPIO pins on the Pi
+have the usb wifi adapter connected
+Power on the Pi with a fresh install of Raspian. Then connect to the Pi over Ethernet to setup the scripts.
+set up server at home or a free amazon ec2 server or a vps server.
+log in to the server through ssh with private key.
+insure no passwords are used only encryption keys check the sshd_config
+install ptunnel and make it run on boot i.e create a cron job as root [optional][ex: @reboot root /usr/bin/ptunnel -x "password"]
+create dedicated account for rsync on server
+ssh into the RPI sudo su into root and use ssh-keygen to create auth keys
+import the rpi's public key [id_rsa.pub] into the servers rysnc authorized_keys for public key authorization
+log into the server from the rpi (tunnel or normal) to test the authentication and import the servers key fingerprint.
+On the rpi run the install script
+
+Once again check the README for more details.
+
+
+Enjoy...
+
+</pre></body></html>

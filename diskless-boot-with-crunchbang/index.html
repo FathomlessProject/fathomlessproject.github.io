@@ -1,0 +1,119 @@
+<html><head><title>Diskless boot with CrunchBang</title> <style fprolloverstyle>A:hover {color: #D1F2C4; text-decoration: none}</style></head> <body text="#E0E0E0" bgcolor="#131313" link="#BFBFBF" vlink="#BFBFBF" alink="#BFBFBF" style="font-size: 11pt"><pre><hr>|| Diskless boot with CrunchBang, author: xor-function || 10/19/2015 || <a style="text-decoration: none" href="../"><span style="text-decoration: none">Back to main</span></a><hr></pre><pre>
+
+There's a lot of different methods to achieve a diskless boot and quite a few rely on centralized processing 
+and storage such as a SAN, but this has it's limitations especially on high IO applications like graphics/multimedia. 
+One solution I have come up with is quite simple and allows for cpu/gpu intensive tasks to be handled by the 
+diskless nodes themselves as the hard drive is created in RAM from data pulled off the network. This is called a 
+ram-disk and run locally, there are many ways of doing this the most common most are familiar is through a boot CD. 
+However in this case for rapid deployment I'll leverage PXE.
+
+First download the crunchbang ISO from crunchbang.org, then you'll need to extract specific files. 
+In order to accomplish this your going to have to mount the ISO.
+
+Mounting ISO file from a terminal session.
+
+EXAMPLE:
+mount -t iso9660 /directory-path/nameof.iso /mnt/img01
+
+Copy the vmlinuz, initrd.img, and filesystem.squashfs, these files will be needed to boot the system
+
+ATTENTION: PXE SERVER ALONG WITH DHCP SERVER REQUIRED (this is explained <a style="text-decoration: none" href="http://www.nightowlconsulting.com/raspberry-pi-pxe-server/"><span style="text-decoration: none">here</span></a>).
+To alter the Host name and/or user name used by crunchbang, this must be done with the PXE Boot Options located in the
+pxelinux.cfg/default file.
+
+EXAMPLE:
+          DEFAULT crunchbang
+          PROMPT 0
+          LABEL crunchbang
+          KERNEL crunchbang/vmlinuz
+          APPEND initrd=crunchbang/initrd.img boot=live config live-config.noroot live-config.hostname=blan 
+                        live-config.username=blank fetch=tftp://X.X.X.X/crunchbang/filesystem.squashfs
+
+**The live-config.noroot option prevents the user from being apart of the sudoers group thus preventing
+users from being able to su into root.**
+
+This way you can boot a vanilla copy of crunchbang over PXE quickly with minimum boot options configuration
+to modify the live-CD desktop and available application you will need to extract the squashfs filesystem, and remaster it.
+
+Install squashfs-tools with your package manager, for Debian/Ubuntu
+apt-get install squashfs-tools
+
+make a working folder for example: temp-dir-x86
+copy the compressed file system to it.
+
+ cp filesystem.squashfs temp-dir-x86/
+ unsquashfs path_to_folder/temp-dir-x86/filesystem.squashfs
+
+change directory (cd) into the work folder (temp-dir-x86)
+
+Now prep the file system for chrooting by mounting it.
+
+
+EXAMPLE:
+(squashfs-root folder contains core file system, /dev, /etc, /proc, /sys ... etc)
+
+         mount -vt devpts devpts squashfs-root/dev/pts/ -o gid=5,mode=620
+         mount -vt proc proc squashfs-root/proc/
+         mount -vt sysfs sysfs squashfs-root/sys
+         mount -vt tmpfs tmpfs squashfs-root/run/
+
+         chroot squashfs/
+
+To change the root password of the squashfs file system simple
+use the passwd command once chrooted into the mounted file system.
+
+Now one may add/remove packages
+
+Such as:
+Open-ssh-server
+Chromium/Firefox
+Tor/Tor-Browser
+Transmission
+X11vnc
+and so on...
+
+To alter the user desktop environment you may need to make changes to the contents of "/etc/skel" folder.
+
+When you are done just use
+
+mksquashfs squashfs-root/ remastered/filesystem.squashfs
+
+then replace the original with the remastered squashfs in
+the directory you copied it from.
+
+X11VNC
+
+A password can be created for this service, but I will configure it not to autostart so it must be imitated through ssh
+and optionally (Recommended) to be tunneled over ssh, thus the open ssh-server will serve as the authentication method.
+
+X11vnc can be manually started through ssh or tunneled through it.
+
+EXAMPLES:
+[To set up a ssh tunnel from the localhost to the remote x11vnc server]
+
+ssh -L5900:127.0.0.1:5900 USER@X.X.X.X "DISPLAY=:0.0 x11vnc -listen 127.0.0.1"
+
+[Initiate session from the client terminal with the command]
+
+xvnc4viewer 127.0.0.1
+
+To change the default live-CD password of crunchbang one will need to edit a file "/lib/live/config/0030-user-setup"
+and toward the end of it edit a simple part of it.
+
+LINE 63 OF FILE
+
+        # Default password is: live
+        # passwords can be generated with 'echo "live" | mkpasswd -s',
+        # a blank password is 'U5aMy0wojraho'.
+        _PASSWORD="vKggdCfjFtDeo"
+
+Change the above string ^
+
+When developing your desired configuration, Virtual-Box comes in handy for testing.
+
+After you have everything up and running you should be able to root into the diskless workstations with ease. 
+From here on out you can build customizations upon this setup any way you see fit, for example 
+using parallel ssh clients to make rapid changes to all nodes in you LAN.
+
+
+</pre></body></html>

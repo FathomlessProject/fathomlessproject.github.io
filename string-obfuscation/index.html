@@ -1,0 +1,72 @@
+<html><head><title>Exploring string obfuscation techniques</title> <style fprolloverstyle>A:hover {color: #D1F2C4; text-decoration: none}</style></head> <body text="#E0E0E0" bgcolor="#131313" link="#BFBFBF" vlink="#BFBFBF" alink="#BFBFBF" style="font-size: 11pt"><pre><hr>|| Exploring string obfuscation techniques, author: xor-function || 09/27/2015 || <a style="text-decoration: none" href="../"><span style="text-decoration: none">Back to main</span></a><hr></pre><pre>
+
+Some of the current techniques I covered involved compromising, not the 
+website visited itself but the network traffic in order to poison the 
+DOM of the client(individual users). The end result could be to download 
+and execute rouge code on the client's system.
+
+Many of these techniques, especially the more advanced ones tend to shy 
+away from the use of a portable executable (.exe) since they are more 
+"noisy" when they are executed, this makes anti-virus task of detecting 
+them easier.
+
+So I focused on using vbs since it's an interpreted language that could 
+be run by different windows native programs ("wscript", "cscript", 
+"mshta", "powershell", "Office") etc. for the specific purpose of 
+passing a cmd command to powershell which is more capable.
+
+But not just a plain clearly readable cmd string. I used string 
+obfuscation, which works by using a character function that converts 
+the ascii numerical code into the character it represents. This is 
+obviously a tedious task that must be automated, so I wrote an 
+obfuscator in Perl that generates a valid script.
+
+Enter gen-obfuscated
+
+Get the code from github at...
+
+Update: this repo along with async shell-handler are now part of 
+fathomless.
+<a style="text-decoration: none" href="https://github.com/xor-function/fathomless">https://github.com/xor-function/fathomless</a>
+
+Now has an interactive menu.
+
+It can generate one of three script types.
+
+1: vbscript
+2: vba_macro [ experimental: since depending what you generate the script size may be pretty large ]
+3: hta
+
+An new generated script using simple ascii character obfuscation for an 
+IEX download will look like this.
+
+<a><img class="size-large alignnone" src="../pics/string-obfuscation-1.png" width="670" height="446" /></a>
+
+This obfuscator borrows from known malware techniques that employ random 
+strings for function/subroutine or object names and ascii code randomization 
+by performing math operations to split the number up a number into equal 
+values so that when added matches the original ascii value.
+
+I added a random switch between addition and subtraction as you can see 
+in the screen shot. Also added random switches that determine the length 
+of "chr()" concatenation per line and whether to inject a new line in 
+between lines of code.
+
+Now every time the generator is run the resulting code will be altered 
+and have a different cryptographic hash every time even thought the 
+command string in the end is the same. Take a look at the example below.
+
+<a><img class="size-large alignnone" src="../pics/string-obfuscation-2.png" width="670" height="446" /></a>
+
+An example of what you can do with this is you can obfuscate an 
+alphanumeric shellcode injector payload from the social-engineering toolkit.
+
+So This
+
+<a><img class="size-large alignnone" src="../pics/string-obfuscation-3.png" width="670" height="446" /></a>
+
+Turns into overkill
+
+<a><img class="size-large alignnone" src="../pics/string-obfuscation-4.png" width="670" height="446" /></a>
+
+</pre></body></html>

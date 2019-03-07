@@ -1,0 +1,16 @@
+
+<html><head><title>js-poisoner</title> <style fprolloverstyle>A:hover {color: #D1F2C4; text-decoration: none}</style></head> <body text="#E0E0E0" bgcolor="#131313" link="#BFBFBF" vlink="#BFBFBF" alink="#BFBFBF" style="font-size: 11pt"><pre><hr>|| js-poisoner, author: xor-function || 07/14/2016 || <a style="text-decoration: none" href="../"><span style="text-decoration: none">Back to main</span></a><hr></pre><pre>
+
+
+js-poisoner was a forgotten project that had to do with using a squid URL-rewrite program that was malicious.
+
+The source-code is <a style="text-decoration: none" href="https://github.com/xor-function/js-poisoner">here</a>
+
+For this to work, target a specific CDN served script that belongs to your targeted website. It requires that 
+the website sys-admins failed to insure this CDN was hosting it's scripts in a secure manner using HTTPS. 
+The URL-rewrite program will parse the requested urls then perform a regex match on the specifically targeted
+js file. Then serve a modified version of it with the sample/default code of injecting an iframe with a beEF hook.
+
+I leave the rest to your imagination..... 
+
+</pre></body></html>

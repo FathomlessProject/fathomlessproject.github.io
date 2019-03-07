@@ -1,0 +1,26 @@
+<html><head><title>Webcrawling with Mojolicious</title> <style fprolloverstyle>A:hover {color: #D1F2C4; text-decoration: none}</style></head> <body text="#E0E0E0" bgcolor="#131313" link="#BFBFBF" vlink="#BFBFBF" alink="#BFBFBF" style="font-size: 11pt"><pre><hr>|| NIGHT OWL CONSULTING || Webcrawling with Mojolicious, author: xor-function || 06/26/2015 || <a style="text-decoration: none" href="../"><span style="text-decoration: none">Back to main</span></a><hr></pre><pre>
+
+I started working on a web crawler that's based of the Mojolicious Perl framework to reduce the
+amount of modules needed. Right now it's just functioning as a link harvester that saves the results
+to file. All I need to do now is add the additional logic to handle a connector to a database
+(leaning to mysql) just to get a prototype working and begin saving the crawlers results.
+Just judging from the harvested links this could get pretty interesting.
+
+
+if you want to take a look at my code, it's on github.
+
+<a style="text-decoration: none" href="https://github.com/xor-function/mcrawler">https://github.com/xor-function/mcrawler</a>
+
+or clone it with git
+
+git clone https://github.com/xor-function/mcrawler.git
+
+If you have any suggestions, improvements let me know.
+
+
+I have been looking into form manipulation, the mechanics behind scraping on login protected
+sites and see that WWW::Mechanize is favored for this task. If I decide to use mechanize I 
+will only be able to use Mojo::DOM specifically for parsing dom/html source. I also renamed 
+the repo to be more generic since this crawler won't be based purely off of mojolicious.
+
+</pre></body></html>

@@ -1,0 +1,120 @@
+<html><head><title>Asset Tracking With TOR</title> <style fprolloverstyle>A:hover {color: #D1F2C4; text-decoration: none}</style></head> <body text="#E0E0E0" bgcolor="#131313" link="#BFBFBF" vlink="#BFBFBF" alink="#BFBFBF" style="font-size: 11pt"><pre><hr>|| NIGHT OWL CONSULTING || Asset Tracking With TOR, Author: xor-function || 10/08/2015 || <a style="text-decoration: none" href="../"><span style="text-decoration: none">Back to main</span></a><hr></pre><pre>
+
+<iframe src="http://www.youtube.com/embed/89P5ZfrpHCk" width="680" height="470" frameborder="0" allowfullscreen="allowfullscreen"></iframe>
+
+Disclaimer: Mind your local laws, use discretion and common sense.
+
+In this post I'am revisiting the concept I wrote about in laptop tracking with a vpn but now with tor replacing 
+the vpn. Tor simply put is in a way is like a vpn, better yet, a vpn chain. This is in order to relay traffic 
+across different networks. So the tor client software reverse-connects to it's network like a vpn client while 
+also using ssl encryption but without creating a virtual network interface.
+
+This is a way of bypassing NAT and other Firewalls also DNS name services isn't necessary or using a 
+company's vpn servers and client software.
+
+Some may ask themselves.
+
+"But how is a client identified in this network? Isn't it supposed to be anonymous?"
+
+The answer simply put is if you have administrator access to a machine, you're the owner. And you can ssh 
+to it over Tor or any other network connected to the internet then it's a moot point and here I will show 
+you why this can actually be useful, but at the same time understand Tor's network so that you may make 
+safer use of it.
+
+LAPTOP CONFIGURATION
+
+Make sure you create a strong password protected administrator account
+also a regular restricted account open to use without a password
+
+ 
+Download tor expert package
+
+https://www.torproject.org/download/download
+
+ Download Bitvise ssh-server
+
+http://www.bitvise.com/ssh-server-download
+
+Install the ssh server
+
+<a><img class="size-large alignnone" src="../pics/bit-ssh-inst.jpg" width="446" height="600" /></a>
+
+
+configure it to allow access from any host and disable the 
+persistent tray and it's notifications.
+
+<a><img class="size-large alignnone" src="../pics/bit-ssh-conf.jpg" width="670" height="446" /></a>
+
+
+Install tor, don't run it yet.
+
+<a><img class="size-large alignnone" src="../pics/tor-inst.jpg" width="440" height="300" /></a>
+
+create hidden service folder
+
+<a><img class="size-large alignnone" src="../pics/tor-inst.jpg" width="550" height="400" /></a>
+
+
+Edit the torrc config file to create a hidden server
+
+<a><img class="size-large alignnone" src="../pics/torrc.jpg" width="540" height="300" /></a>
+
+
+hidden-server-dir
+virtual-port : 127.0.0.1: port
+
+<a><img class="size-large alignnone" src="../pics/torrc-done.jpg" width="440" height="50" /></a>
+
+start tor & close it ->>> acquire the .onion address from the hostname 
+file tor created in the hidden service folder
+
+<a><img class="size-large alignnone" src="../pics/onion-address.jpg" width="440" height="300" /></a>
+
+
+open a cmd shell with administrator privileges
+Make it a scheduled task:
+
+schtasks /create /SC onstart /TN RS /TR "\"C:\Program Files\Tor\tor.exe"" /RU user /RP *
+
+Reboot the desktop/laptop/VM
+
+ 
+TESTING
+
+On the pc used for recovery your going to need socat to serve as a proxy between ssh and the TOR client.
+This is a lot simpler to set up in Linux and I used Ubuntu, you can use a live-CD if you 
+do not want to permanently install it.
+
+ 
+
+Start tor
+
+open up two terminal sessions
+setup socat on one
+
+socat tcp4-listen:10000,fork socks4a:localhost:-----.onion:8080,socksport=9050
+
+
+shell into the hidden-server on the other
+
+ssh -p 10000 remote-user@localhost
+
+
+Once you have acquired the remote cmd shell you can then interrogate the wlan card in the laptop for 
+nearby access points. And use this information to query google's api services. I go over 
+<a style="text-decoration: none" href="http://www.nightowlconsulting.com/geolocation-methods/">this in more depth here in a post about geo-location.</a> 
+
+ 
+OVERVIEW
+
+From this you can see why having Administrator permissions on a system nullifies any anonymizing 
+efforts because you can interrogate without limitations process in that system. This however 
+can prove useful if only trusted individuals have this information while at the same 
+time denying it to network operators.
+
+This is why one must prevent an unauthorized individual from gaining access to your 
+equipment as an application (Java) exploit would make this possible.
+
+
+
+</pre></body></html>
